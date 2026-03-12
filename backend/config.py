@@ -25,7 +25,6 @@ class Settings:
 
     DYNAMODB_TABLE=os.getenv("DYNAMODB_TABLE","roadsense-incidents")
 
-
     # AI CONFIG
 
     BEDROCK_MODEL=os.getenv(
