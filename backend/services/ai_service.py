@@ -1,16 +1,28 @@
-import random
-
-
 def analyze_image(image):
     """
-    Simulates pothole severity detection.
+    Simulates pothole severity detection based on image size.
     """
 
-    severities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+    try:
+        # read image bytes
+        image_bytes = image.file.read()
+        file_size = len(image_bytes)
 
-    severity = random.choice(severities)
+        # simple logic based on image size
+        if file_size < 200000:
+            severity = "LOW"
+        elif file_size < 500000:
+            severity = "MEDIUM"
+        elif file_size < 1000000:
+            severity = "HIGH"
+        else:
+            severity = "CRITICAL"
 
-    confidence = random.randint(70, 95)
+        confidence = 85
+
+    except Exception:
+        severity = "MEDIUM"
+        confidence = 70
 
     return {
         "severity": severity,
@@ -21,10 +33,10 @@ def analyze_image(image):
 
 def generate_complaint(location, severity, latitude, longitude):
     """
-    Generates a complaint text for municipal authorities.
+    Generates a complaint message for authorities.
     """
 
-    complaint_text = f"""
+    complaint = f"""
 Subject: Urgent pothole repair request
 
 Location: {location}
@@ -34,6 +46,8 @@ Coordinates: {latitude}, {longitude}
 A pothole has been detected at the above location and poses a risk to vehicles and pedestrians.
 
 Kindly arrange for immediate repair to prevent accidents and traffic disruption.
+
+Reported by RoadSense AI system.
 """
 
-    return complaint_text
+    return complaint
