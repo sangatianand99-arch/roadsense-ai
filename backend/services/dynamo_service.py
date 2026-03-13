@@ -13,7 +13,7 @@ dynamodb = boto3.resource(
 
 table = dynamodb.Table(settings.DYNAMODB_TABLE)
 
-def save_incident(latitude: float, longitude: float, severity: str, image_url: str) -> dict:
+def save_incident(latitude: float, longitude: float, severity: str, image_url: str, ai_result: dict = {}) -> dict:
     incident_id = str(uuid.uuid4())
     timestamp = datetime.utcnow().isoformat()
 
@@ -24,14 +24,18 @@ def save_incident(latitude: float, longitude: float, severity: str, image_url: s
         "longitude": str(longitude),
         "severity": severity,
         "image_url": image_url,
-        "status": "reported"
+        "status": "reported",
+        "confidence": str(ai_result.get("confidence", 70)),
+        "size_estimate": ai_result.get("size_estimate", "unknown"),
+        "description": ai_result.get("description", "Road damage detected"),
+        "complaint_sent": False
     }
 
     try:
         table.put_item(Item=item)
         return item
     except ClientError as e:
-        raise Exception(f"DynamoDB save failed: {str(e)}")
+        raise Exception(f"DynamoDB save failed: {str(e)})")
 
 
 def get_all_incidents() -> list:
@@ -39,4 +43,17 @@ def get_all_incidents() -> list:
         response = table.scan()
         return response.get("Items", [])
     except ClientError as e:
-        raise Exception(f"DynamoDB fetch failed: {str(e)}")
+        raise Exception(f"DynamoDB fetch failed: {str(e)})")
+
+
+def update_incident_status(incident_id: str, status: str) -> dict:
+    try:
+        table.update_item(
+            Key={"incident_id": incident_id},
+            UpdateExpression="SET #s = :s",
+            ExpressionAttributeNames={"#s": "status"},
+            ExpressionAttributeValues={":s": status}
+        )
+        return {"incident_id": incident_id, "status": status}
+    except ClientError as e:
+        raise Exception(f"DynamoDB update failed: {str(e)})")
