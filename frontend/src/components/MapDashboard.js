@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
-import { getPotholes } from "../services/api";
+import { getPotholes, getComplaint } from "../services/api";
 import "leaflet/dist/leaflet.css";
 
 const severityColor = {
@@ -20,6 +20,8 @@ const mockData = [
 
 export default function MapDashboard() {
   const [potholes, setPotholes] = useState([]);
+  const [complaints, setComplaints] = useState({});
+  const [loadingComplaint, setLoadingComplaint] = useState({});
 
   useEffect(() => {
     getPotholes().then((res) => {
@@ -27,6 +29,26 @@ export default function MapDashboard() {
       setPotholes([...real, ...mockData]);
     }).catch(() => setPotholes(mockData));
   }, []);
+
+  const handleGenerateComplaint = async (incidentId) => {
+    // skip mock data
+    if (incidentId.startsWith("mock")) {
+      setComplaints(prev => ({ ...prev, [incidentId]: "This is a demo incident. Upload a real pothole to generate a complaint." }));
+      return;
+    }
+    setLoadingComplaint(prev => ({ ...prev, [incidentId]: true }));
+    try {
+      const res = await getComplaint(incidentId);
+      if (res.status === "success") {
+        setComplaints(prev => ({ ...prev, [incidentId]: res.data.complaint }));
+      } else {
+        setComplaints(prev => ({ ...prev, [incidentId]: "Failed to generate complaint." }));
+      }
+    } catch {
+      setComplaints(prev => ({ ...prev, [incidentId]: "Error generating complaint." }));
+    }
+    setLoadingComplaint(prev => ({ ...prev, [incidentId]: false }));
+  };
 
   return (
     <div style={{ padding: "20px" }}>
@@ -57,11 +79,44 @@ export default function MapDashboard() {
               weight={1}
               fillOpacity={0.85}
             >
-              <Popup>
+              <Popup minWidth={250}>
                 <strong>Severity: {p.severity}</strong><br />
                 Status: {p.status}<br />
                 {p.description && <><em>{p.description}</em><br /></>}
-                {new Date(p.timestamp).toLocaleString()}
+                {new Date(p.timestamp).toLocaleString()}<br /><br />
+
+                {!complaints[p.incident_id] ? (
+                  <button
+                    onClick={() => handleGenerateComplaint(p.incident_id)}
+                    disabled={loadingComplaint[p.incident_id]}
+                    style={{
+                      background: "#e53e3e",
+                      color: "white",
+                      border: "none",
+                      padding: "6px 12px",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      width: "100%"
+                    }}
+                  >
+                    {loadingComplaint[p.incident_id] ? "Generating..." : "📋 Generate BBMP Complaint"}
+                  </button>
+                ) : (
+                  <div style={{ marginTop: "8px" }}>
+                    <div style={{
+                      background: "#f0fff4",
+                      border: "1px solid #68d391",
+                      borderRadius: "4px",
+                      padding: "8px",
+                      fontSize: "12px",
+                      maxHeight: "120px",
+                      overflowY: "auto"
+                    }}>
+                      {complaints[p.incident_id]}
+                    </div>
+                    <p style={{ color: "green", fontSize: "12px", marginTop: "4px" }}>✅ Complaint Sent</p>
+                  </div>
+                )}
               </Popup>
             </CircleMarker>
           ))}

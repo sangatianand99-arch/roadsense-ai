@@ -28,8 +28,11 @@ def save_incident(latitude: float, longitude: float, severity: str, image_url: s
         "confidence": str(ai_result.get("confidence", 70)),
         "size_estimate": ai_result.get("size_estimate", "unknown"),
         "description": ai_result.get("description", "Road damage detected"),
-        "complaint_sent": False
-    }
+        "complaint_sent": False,
+        "vehicle_damage_cost_per_day": str(ai_result.get("vehicle_damage_cost_per_day", 0)),
+        "repair_cost": str(ai_result.get("repair_cost", 0)),
+        "monthly_savings_if_fixed": str(ai_result.get("monthly_savings_if_fixed", 0)),
+ }
 
     try:
         table.put_item(Item=item)

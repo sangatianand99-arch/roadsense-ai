@@ -57,6 +57,9 @@ export default function UploadForm({ onUploadSuccess }) {
     <p>Confidence: <strong>{result.data.confidence}%</strong></p>
     <p>Size: <strong>{result.data.size_estimate}</strong></p>
     <p>Description: <em>{result.data.description}</em></p>
+    <p>💰 Vehicle Damage/day: <strong>₹{result.data.vehicle_damage_cost_per_day}</strong></p>
+    <p>🔧 Repair Cost: <strong>₹{result.data.repair_cost}</strong></p>
+    <p>📈 Monthly Savings if Fixed: <strong>₹{result.data.monthly_savings_if_fixed}</strong></p>
     <p style={{fontSize: "12px", color: "#666"}}>ID: {result.data.incident_id}</p>
   </div>
 )}

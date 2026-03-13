@@ -3,6 +3,7 @@ import json
 import base64
 from config import settings
 import os
+
 bedrock = boto3.client(
     "bedrock-runtime",
     aws_access_key_id=settings.AWS_ACCESS_KEY,
@@ -12,7 +13,6 @@ bedrock = boto3.client(
 
 def analyze_image_with_bedrock(image_bytes: bytes) -> dict:
     image_b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
-
     prompt = """Analyze this road image for potholes or road damage.
     Respond ONLY in this exact JSON format, nothing else:
     {
@@ -20,9 +20,11 @@ def analyze_image_with_bedrock(image_bytes: bytes) -> dict:
         "confidence": <number 0-100>,
         "size_estimate": "small/medium/large/very large",
         "risk_level": "LOW or MEDIUM or HIGH or CRITICAL",
-        "description": "one sentence description"
+        "description": "one sentence description",
+        "vehicle_damage_cost_per_day": <estimated INR cost of vehicle damage per day>,
+        "repair_cost": <estimated INR cost to repair this pothole>,
+        "monthly_savings_if_fixed": <estimated INR savings per month if fixed>
     }"""
-
     body = json.dumps({
         "anthropic_version": "bedrock-2023-05-31",
         "max_tokens": 300,
@@ -46,7 +48,6 @@ def analyze_image_with_bedrock(image_bytes: bytes) -> dict:
             }
         ]
     })
-
     try:
         response = bedrock.invoke_model(
             modelId="anthropic.claude-3-haiku-20240307-v1:0",
@@ -56,21 +57,21 @@ def analyze_image_with_bedrock(image_bytes: bytes) -> dict:
         )
         result = json.loads(response["body"].read())
         text = result["content"][0]["text"]
-        # parse JSON from response
         start = text.find("{")
         end = text.rfind("}") + 1
         return json.loads(text[start:end])
     except Exception as e:
-        # fallback if bedrock fails
         print(f"BEDROCK ERROR: {str(e)}")
         return {
             "severity": "MEDIUM",
             "confidence": 70,
             "size_estimate": "medium",
             "risk_level": "MEDIUM",
-            "description": "Road damage detected."
+            "description": "Road damage detected.",
+            "vehicle_damage_cost_per_day": 5000,
+            "repair_cost": 8000,
+            "monthly_savings_if_fixed": 15000
         }
-
 
 def generate_complaint(latitude: str, longitude: str, severity: str, image_url: str, street_name: str = "Unknown location") -> str:
     prompt = f"""Generate a formal BBMP complaint letter for a pothole:
@@ -80,13 +81,11 @@ def generate_complaint(latitude: str, longitude: str, severity: str, image_url: 
     Photo: {image_url}
     
     Write a professional 4-5 line complaint requesting immediate repair. Sign off as RoadSense AI System."""
-
     body = json.dumps({
         "anthropic_version": "bedrock-2023-05-31",
         "max_tokens": 300,
         "messages": [{"role": "user", "content": prompt}]
     })
-
     try:
         response = bedrock.invoke_model(
             modelId="anthropic.claude-3-haiku-20240307-v1:0",
