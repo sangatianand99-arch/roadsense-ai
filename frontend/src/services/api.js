@@ -27,3 +27,11 @@ export const getComplaint = async (incidentId) => {
   const res = await fetch(`${BASE_URL}/complaint/${incidentId}`);
   return res.json();
 };
+export const updateStatus = async (incidentId, status) => {
+  const res = await fetch(`${BASE_URL}/potholes/${incidentId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status })
+  });
+  return res.json();
+};

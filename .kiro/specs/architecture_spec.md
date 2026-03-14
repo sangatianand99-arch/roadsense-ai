@@ -1,181 +1,67 @@
-# RoadSense AI Architecture Specification
-
+# RoadSense AI — Architecture Spec
 
 ## System Architecture
 
-RoadSense follows layered architecture.
+### Frontend (React)
+- Upload Form — image + location search with Nominatim geocoding
+- Live Map — Leaflet + TomTom traffic overlay
+- Stats Panel — real-time DynamoDB stats
+- Leaderboard — worst zones by severity + traffic impact
+- Priority List — BBMP repair priority scoring
+- ROI Calculator — economic loss vs repair cost
+- Demo Mode — auto-play pipeline for presentations
 
-Frontend layer
+### Backend (FastAPI + Python)
+- `/api/upload` — receives image, runs Bedrock Vision, saves to S3 + DynamoDB
+- `/api/potholes` — fetches all incidents from DynamoDB
+- `/api/stats` — aggregates severity/status counts
+- `/api/complaint/{id}` — generates RTI complaint via Bedrock
 
-Backend API layer
-
-Integration layer
-
-Service layer
-
-Cloud layer
-
-
-
-## Layers
-
-
-Frontend:
-
-React UI
-
-Upload form
-
-Dashboard
-
-Map display
-
-
-
-Backend:
-
-FastAPI server
-
-Routes
-
-Validation
-
-Response formatting
-
-
-
-Integration Layer:
-
-integration_service.py
-
-Connects routes to services.
-
-Prevents direct dependency.
-
-
-
-Service Layer:
-
-aws_service.py
-
-ai_service.py
-
-location_service.py
-
-traffic_service.py
-
-
-
-Cloud Layer:
-
-AWS S3
-
-AWS DynamoDB
-
-AWS Bedrock
-
-
-
-## Flow
-
+### AWS Services Flow
+```
 User uploads image
+    ↓
+FastAPI backend receives file
+    ↓
+Amazon Bedrock (Claude 3 Haiku) analyzes image
+    → Returns: severity, confidence, size, description, economic impact
+    ↓
+Amazon S3 stores image
+    → Returns: public image URL
+    ↓
+Amazon DynamoDB stores incident record
+    → incident_id, lat, lng, severity, image_url, ai_result, timestamp
+    ↓
+Frontend displays result + map pin
+    ↓
+User clicks "Generate Complaint"
+    ↓
+Amazon Bedrock generates RTI format letter
+    ↓
+Complaint displayed + marked as sent
+```
 
-Route receives request
+## Data Model (DynamoDB)
+```json
+{
+  "incident_id": "uuid",
+  "timestamp": "ISO8601",
+  "latitude": "string",
+  "longitude": "string",
+  "severity": "LOW|MEDIUM|HIGH|CRITICAL",
+  "image_url": "s3_url",
+  "status": "reported|under_review|in_progress|fixed",
+  "confidence": "number",
+  "size_estimate": "string",
+  "description": "string",
+  "vehicle_damage_cost_per_day": "number",
+  "repair_cost": "number",
+  "monthly_savings_if_fixed": "number",
+  "complaint_sent": "boolean"
+}
+```
 
-Integration service processes
-
-AI analyzes image
-
-AWS stores image
-
-Record built
-
-Response returned
-
-
-
-## Design Rules
-
-Routes must not call AWS directly.
-
-Routes must not call AI directly.
-
-Only integration service connects services.
-
-Config must be centralized.
-
-Responses must use utils/response.py.
-
-
-
-## Backend Structure
-
-backend/
-
-app.py → entrypoint
-
-config.py → settings
-
-routes/ → API endpoints
-
-services/ → business logic
-
-models/ → data models
-
-utils/ → helpers
-
-
-
-## Deployment Ready Features
-
-Health endpoint exists.
-
-CORS enabled.
-
-Config driven.
-
-Modular services.
-
-Swagger documentation.
-
-
-
-## Future Improvements
-
-Authentication layer
-
-Caching layer
-
-Queue system
-
-Event processing
-
-Lambda triggers
-
-
-
-## Current Architecture Stage
-
-Phase:
-
-Foundation complete.
-
-Next:
-
-AWS integration.
-
-AI integration.
-
-Frontend connection.
-
-
-
-## Architecture Goal
-
-Goal:
-
-Clean integration without route changes.
-
-Services replace mocks without breaking API.
-
-Stable demo backend.
+## Security
+- AWS credentials stored in .env (not committed to git)
+- CORS enabled for local development
+- Input validation on file type and size

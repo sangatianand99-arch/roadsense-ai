@@ -13,7 +13,7 @@ def get_stats():
         
         severity_counts = {"low": 0, "medium": 0, "high": 0}
         for incident in incidents:
-            severity = incident.get("severity", "low")
+            severity = incident.get("severity", "low").lower()
             if severity in severity_counts:
                 severity_counts[severity] += 1
         

@@ -1,253 +1,88 @@
-# RoadSense AI API Specification
+# RoadSense AI — API Spec
 
-## Project
+## Base URL
+`http://localhost:8000/api`
 
-RoadSense AI – AI powered road incident detection and reporting platform.
+## Endpoints
 
+### POST /upload
+Upload a pothole image with GPS coordinates.
 
-## API Base URL
+**Request:** multipart/form-data
+- `image` (file) — JPEG/PNG road image
+- `latitude` (float) — GPS latitude
+- `longitude` (float) — GPS longitude
 
-/api
-
-
-## API Design Rules
-
-All APIs must return:
-
-status
-message
-data
-timestamp
-
-Response format:
-
+**Response:**
+```json
 {
- "status":"success",
- "message":"operation completed",
- "data":{},
- "timestamp":"utc time"
-}
-
-
-## Endpoint 1: Upload Incident
-
-POST /api/upload
-
-
-Description:
-
-Uploads road incident image and metadata.
-
-
-Input:
-
-multipart form:
-
-image → file
-
-latitude → float
-
-longitude → float
-
-
-Example request:
-
-image:file
-
-latitude:12.9716
-
-longitude:77.5946
-
-
-Process flow:
-
-Backend receives file
-
-AWS uploads to S3
-
-AI analyzes image
-
-GPS stored
-
-Record saved
-
-Response returned
-
-
-Response:
-
-{
- "status":"success",
-
- "data":{
-
-  "incident_id":"uuid",
-
-  "severity":"medium",
-
-  "image_url":"s3 url",
-
-  "latitude":12.9716,
-
-  "longitude":77.5946
-
- }
-
-}
-
-
-## Endpoint 2: Get Potholes
-
-GET /api/potholes
-
-
-Description:
-
-Returns list of reported incidents.
-
-
-Response:
-
-{
- "status":"success",
-
- "data":[
-
-  {
-
-   "id":"uuid",
-
-   "severity":"high",
-
-   "latitude":12.9,
-
-   "longitude":77.5,
-
-   "image_url":"url"
-
+  "status": "success",
+  "data": {
+    "incident_id": "uuid",
+    "severity": "HIGH",
+    "confidence": 90,
+    "size_estimate": "large",
+    "description": "Large pothole with severe surface damage",
+    "vehicle_damage_cost_per_day": 8000,
+    "repair_cost": 25000,
+    "monthly_savings_if_fixed": 24000,
+    "image_url": "https://s3.amazonaws.com/...",
+    "status": "reported",
+    "timestamp": "2026-03-13T12:00:00"
   }
-
- ]
-
 }
+```
 
+### GET /potholes
+Fetch all reported incidents.
 
-## Endpoint 3: Stats
-
-GET /api/stats
-
-
-Description:
-
-Returns dashboard statistics.
-
-
-Response:
-
+**Response:**
+```json
 {
- "status":"success",
-
- "data":{
-
-  "total_incidents":120,
-
-  "high_severity":30,
-
-  "medium":60,
-
-  "low":30
-
- }
-
+  "status": "success",
+  "data": [/* array of incidents */]
 }
+```
 
+### GET /stats
+Get aggregated statistics.
 
-## AI Service Contract
-
-AI must expose:
-
-analyze_image()
-
-Input:
-
-image path
-
-Output:
-
+**Response:**
+```json
 {
- "severity":"medium",
-
- "confidence":85,
-
- "incident_type":"pothole"
-
+  "status": "success",
+  "data": {
+    "total_incidents": 10,
+    "by_severity": {"low": 2, "medium": 4, "high": 3, "critical": 1},
+    "by_status": {"reported": 8, "resolved": 2}
+  }
 }
+```
 
+### GET /complaint/{incident_id}
+Generate RTI-format BBMP complaint for an incident.
 
-## AWS Service Contract
-
-AWS must expose:
-
-upload_image()
-
-store_record()
-
-
-upload_image output:
-
+**Response:**
+```json
 {
- "image_url":"s3 link"
+  "status": "success",
+  "data": {
+    "complaint": "To: Public Information Officer, BBMP\n..."
+  }
 }
+```
 
+### PATCH /potholes/{incident_id}/status
+Update incident status.
 
-store_record output:
+**Request:**
+```json
+{"status": "in_progress"}
+```
 
+**Response:**
+```json
 {
- "record_id":"uuid"
+  "status": "success",
+  "data": {"incident_id": "uuid", "status": "in_progress"}
 }
-
-
-## Error Handling
-
-Errors must return:
-
-{
- "status":"error",
-
- "message":"error reason"
-}
-
-
-## Future APIs
-
-Planned:
-
-GET /api/incident/{id}
-
-POST /api/duplicate-check
-
-POST /api/traffic-impact
-
-POST /api/generate-report
-
-
-## Versioning
-
-Version:
-
-v1
-
-
-## Integration Priority
-
-First implement:
-
-POST /api/upload
-
-Then:
-
-GET /api/potholes
-
-Then:
-
-GET /api/stats
